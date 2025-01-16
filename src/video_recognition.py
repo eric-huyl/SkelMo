@@ -1,11 +1,26 @@
 import mediapipe as mp
 import numpy as np
-import matplotlib.pyplot as plt
 from mediapipe import solutions
 from mediapipe.framework.formats import landmark_pb2
 import cv2
-from video_capture import open_camera, show_video_stream
 import time
+
+annotated_image_global = None
+
+model_path = 'pose_landmarker_heavy.task'
+BaseOptions = mp.tasks.BaseOptions
+PoseLandmarker = mp.tasks.vision.PoseLandmarker
+PoseLandmarkerOptions = mp.tasks.vision.PoseLandmarkerOptions
+PoseLandmarkerResult = mp.tasks.vision.PoseLandmarkerResult
+VisionRunningMode = mp.tasks.vision.RunningMode
+
+
+def open_camera(camera_index=0):
+    cap = cv2.VideoCapture(camera_index)
+    if not cap.isOpened():
+        print("无法打开摄像头")
+        exit()
+    return cap
 
 
 def draw_landmarks_on_image(rgb_image, detection_result):
@@ -30,61 +45,39 @@ def draw_landmarks_on_image(rgb_image, detection_result):
             solutions.drawing_styles.get_default_pose_landmarks_style())
     return annotated_image
 
-model_path = 'pose_landmarker_heavy.task'
-
-
-BaseOptions = mp.tasks.BaseOptions
-PoseLandmarker = mp.tasks.vision.PoseLandmarker
-PoseLandmarkerOptions = mp.tasks.vision.PoseLandmarkerOptions
-PoseLandmarkerResult = mp.tasks.vision.PoseLandmarkerResult
-VisionRunningMode = mp.tasks.vision.RunningMode
-
-annotated_image = None
 
 # Create a pose landmarker instance with the live stream mode:
-def print_result(result: PoseLandmarkerResult, output_image: mp.Image, timestamp_ms: int):
-    # print('pose landmarker result: {}'.format(result))
-    global annotated_image
+def print_result(result: PoseLandmarkerResult, output_image: mp.Image,
+                 timestamp_ms: int):
     annotated_image = draw_landmarks_on_image(output_image.numpy_view(),
                                               result)
-    
+    global annotated_image_global
+    annotated_image_global = annotated_image
 
 
 options = PoseLandmarkerOptions(
     base_options=BaseOptions(model_asset_path=model_path),
     running_mode=VisionRunningMode.LIVE_STREAM,
     result_callback=print_result)
-landmarker = PoseLandmarker.create_from_options(options)
 
-def main():
+with PoseLandmarker.create_from_options(options) as landmarker:
     cap = open_camera(0)
-    prev_time = time.time()  # 初始化时间
     while True:
         ret, frame = cap.read()  # 捕获每一帧
         if not ret:
             print("无法读取视频帧")
             break
-
-        current_time = time.time()  # 获取当前时间
-        if current_time - prev_time >= 1:
-            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
-            landmarker.detect_async(mp_image, int(current_time*1000))
-
-        # 显示视频流
-        global annotated_image
-
         cv2.imshow('Live Video', frame)
+        current_time = time.time()  # 获取当前时间
+
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
+        landmarker.detect_async(mp_image, int(current_time * 1000))
         try:
-            cv2.imshow('annotated', annotated_image)
+            cv2.imshow("Annotated", annotated_image_global)
         except Exception as e:
-            print(e)
-        # 如果按下 'q' 键，退出循环
+            print(f'## {e}')
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
     cap.release()  # 释放摄像头资源
     cv2.destroyAllWindows()  # 关闭所有 OpenCV 窗口
-
-
-if __name__ == '__main__':
-    main()

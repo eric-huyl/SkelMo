@@ -29,7 +29,7 @@ def show_video_stream(cap, func = save_frame_as_numpy):
 
         # 每秒保存一张图像
         if current_time - prev_time >= 1:
-            func(frame, current_time)  # 保存当前帧
+            # func(frame, current_time)  # 保存当前帧
             prev_time = current_time  # 更新上次保存图像的时间
 
         # 显示视频流

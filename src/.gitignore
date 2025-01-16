@@ -1,0 +1,33 @@
+# 忽略所有视频文件
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.flv
+*.wmv
+*.webm
+*.mpeg
+*.mpg
+*.3gp
+*.m4v
+*.rm
+
+# 忽略所有图片文件
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tiff
+*.webp
+*.svg
+*.heif
+*.heic
+
+# 忽略特定格式的缩略图文件
+*.ico
+
+# 忽略其他常见的图片格式
+*.raw
+*.dng
+*.nef
