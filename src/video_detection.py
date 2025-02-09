@@ -1,50 +1,18 @@
 import mediapipe as mp
-from mediapipe import solutions
+import json
 import os
 import cv2
 import numpy as np
-import time
-import matplotlib.pyplot as plt
-from mediapipe.framework.formats import landmark_pb2
+from utils import delete_all_files_in_folder
 
 
-def draw_landmarks_on_image(rgb_image, detection_result):
-    pose_landmarks_list = detection_result.pose_landmarks
-    annotated_image = np.copy(rgb_image)
 
-    # Loop through the detected poses to visualize.
-    for idx in range(len(pose_landmarks_list)):
-        pose_landmarks = pose_landmarks_list[idx]
-
-        # Draw the pose landmarks.
-        pose_landmarks_proto = landmark_pb2.NormalizedLandmarkList()
-        pose_landmarks_proto.landmark.extend([
-            landmark_pb2.NormalizedLandmark(x=landmark.x,
-                                            y=landmark.y,
-                                            z=landmark.z)
-            for landmark in pose_landmarks
-        ])
-        solutions.drawing_utils.draw_landmarks(
-            annotated_image, pose_landmarks_proto,
-            solutions.pose.POSE_CONNECTIONS,
-            solutions.drawing_styles.get_default_pose_landmarks_style())
-    return annotated_image
-
-def delete_all_files_in_folder(folder_path):
-    # 列出文件夹中的所有文件
-    for filename in os.listdir(folder_path):
-        file_path = os.path.join(folder_path, filename)
-
-        # 如果是文件，则删除它
-        if os.path.isfile(file_path):
-            os.remove(file_path)
-            print(f"Deleted: {file_path}")
 
 
 def read_video_as_numpy(video_path):
     # 打开视频文件
     cap = cv2.VideoCapture(video_path)
-    
+
     if not cap.isOpened():
         print("Error: Unable to open video file.")
         return None
@@ -56,7 +24,7 @@ def read_video_as_numpy(video_path):
     # 获取视频的总帧数
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     print(f"Total frames: {total_frames}")
-    
+
     # 存储视频帧的列表
     frames = []
 
@@ -74,8 +42,7 @@ def read_video_as_numpy(video_path):
         if not ret:
             break
 
-        frame_filename = os.path.join('tmp/',
-                                          f"frame_{frame_idx}.npy")
+        frame_filename = os.path.join('tmp/', f"frame_{frame_idx}.npy")
         np.save(frame_filename, frame)
 
         # 将帧添加到数组中
@@ -83,7 +50,7 @@ def read_video_as_numpy(video_path):
 
         # 按指定的帧率调整读取帧的位置
         frame_idx += frame_interval
-    
+
     # 转换为 NumPy 数组
     frames_np = np.array(frames)
 
@@ -118,6 +85,7 @@ def load_numpy_images_from_folder(folder_path="tmp"):
 
     return images
 
+
 if __name__ == '__main__':
     delete_all_files_in_folder('tmp/')
     model_path = 'pose_landmarker_heavy.task'
@@ -133,13 +101,23 @@ if __name__ == '__main__':
     with PoseLandmarker.create_from_options(options) as landmarker:
         read_video_as_numpy("input.mp4")
         images = load_numpy_images_from_folder()
+        video_landmarks = []
         for idx, numpy_image in enumerate(images):
-            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=numpy_image)
+            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB,
+                                data=numpy_image)
             detection_result = landmarker.detect(mp_image)
-            annotated_image = draw_landmarks_on_image(mp_image.numpy_view(),
-                                                      detection_result)
             try:
-                cv2.imshow(f'title{idx}', annotated_image)
-                cv2.waitKey(0)
+                frame_landmarks = []
+                for landmark_object in detection_result.pose_landmarks[0]:
+                    landmark_dict = {
+                        'x': landmark_object.x,
+                        'y': landmark_object.y,
+                        'z': landmark_object.z,
+                        'visibility': landmark_object.visibility
+                    }
+                    frame_landmarks.append(landmark_dict)
             except Exception as e:
                 print(e)
+        with open('output/test.json', 'w') as f:
+            json.dump(result_list, f)
+    delete_all_files_in_folder('tmp/')

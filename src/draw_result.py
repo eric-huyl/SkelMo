@@ -1,8 +1,8 @@
-import mediapipe as mp
-import numpy as np
-import matplotlib.pyplot as plt
-from mediapipe import solutions
 from mediapipe.framework.formats import landmark_pb2
+import numpy as np
+from mediapipe import solutions
+import matplotlib.pyplot as plt
+import json
 
 
 def draw_landmarks_on_image(rgb_image, detection_result):
@@ -28,23 +28,24 @@ def draw_landmarks_on_image(rgb_image, detection_result):
     return annotated_image
 
 
-model_path = 'pose_landmarker_heavy.task'
+def draw_landmarks_lite(image_landmarks):
+    list_x = []
+    list_y = []
+    for landmark in image_landmarks:
+        list_x.append(landmark.x)
+        list_y.append(landmark.y)
+    plt.scatter(list_x, list_y)
+    plt.xlabel('Normalized X')
 
-BaseOptions = mp.tasks.BaseOptions
-PoseLandmarker = mp.tasks.vision.PoseLandmarker
-PoseLandmarkerOptions = mp.tasks.vision.PoseLandmarkerOptions
-VisionRunningMode = mp.tasks.vision.RunningMode
+    plt.ylabel('Normalized Y')
 
-options = PoseLandmarkerOptions(
-    base_options=BaseOptions(model_asset_path=model_path),
-    running_mode=VisionRunningMode.IMAGE)
+    # 设置图形标题
+    plt.title('Scatter plot of normalized coordinates')
 
-with PoseLandmarker.create_from_options(options) as landmarker:
-    # The landmarker is initialized. Use it here.
-    # ...
-    mp_image = mp.Image.create_from_file('image.jpg')
-    pose_landmarker_result = landmarker.detect(mp_image)
-    annotated_image = draw_landmarks_on_image(mp_image.numpy_view(),
-                                              pose_landmarker_result)
-plt.imshow(annotated_image)
-plt.show()
+    # 显示图形
+    plt.show()
+
+def test():
+    with open('output/test.json', 'r') as f:
+        video_landmarks = json.load(f)
+        draw_landmarks_lite(video_landmarks)
