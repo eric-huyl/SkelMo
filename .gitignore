@@ -31,3 +31,6 @@
 *.raw
 *.dng
 *.nef
+
+*.task
+tmp/

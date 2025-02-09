@@ -4,7 +4,7 @@ import os
 import cv2
 import numpy as np
 import time
-
+import matplotlib.pyplot as plt
 from mediapipe.framework.formats import landmark_pb2
 
 
@@ -30,70 +30,67 @@ def draw_landmarks_on_image(rgb_image, detection_result):
             solutions.drawing_styles.get_default_pose_landmarks_style())
     return annotated_image
 
+def delete_all_files_in_folder(folder_path):
+    # 列出文件夹中的所有文件
+    for filename in os.listdir(folder_path):
+        file_path = os.path.join(folder_path, filename)
 
-def save_frames_as_numpy(video_path, output_folder="tmp", interval=1):
-    """
-    打开视频文件并每隔指定时间间隔截图一次，保存为 NumPy 格式文件。
+        # 如果是文件，则删除它
+        if os.path.isfile(file_path):
+            os.remove(file_path)
+            print(f"Deleted: {file_path}")
 
-    参数:
-    - video_path: 视频文件的路径
-    - output_folder: 输出保存截图的文件夹，默认为 "frames"
-    - interval: 截图的时间间隔（秒），默认为 1 秒
-    """
+
+def read_video_as_numpy(video_path):
     # 打开视频文件
     cap = cv2.VideoCapture(video_path)
-
-    # 检查视频是否成功打开
+    
     if not cap.isOpened():
-        print(f"Error: Could not open video file {video_path}")
-        return
+        print("Error: Unable to open video file.")
+        return None
 
-    # 获取视频的帧率（fps）
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    print(f"视频的帧率: {fps} FPS")
+    # 获取原始帧率
+    original_fps = cap.get(cv2.CAP_PROP_FPS)
+    print(f"Original FPS: {original_fps}")
 
-    # 获取视频总帧数
+    # 获取视频的总帧数
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    print(f"视频总帧数: {total_frames}")
+    print(f"Total frames: {total_frames}")
+    
+    # 存储视频帧的列表
+    frames = []
 
-    # 创建输出文件夹（如果不存在）
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)
+    # 计算读取每帧的时间间隔
+    frame_interval = 60
 
-    # 初始化计时器
-    start_time = time.time()
-    frame_count = 0
-
+    frame_idx = 0
     while True:
+        # 设置视频读取位置
+        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
+
+        # 读取一帧
         ret, frame = cap.read()
 
-        # 如果读取失败，退出循环
         if not ret:
-            print("Error: Failed to read frame from video")
             break
 
-        # 获取当前时间
-        current_time = time.time()
+        frame_filename = os.path.join('tmp/',
+                                          f"frame_{frame_idx}.npy")
+        np.save(frame_filename, frame)
 
-        # 每隔指定时间间隔截图一次
-        if current_time - start_time >= interval:
-            # 保存当前帧为 NumPy 格式
-            frame_filename = os.path.join(output_folder,
-                                          f"frame_{frame_count}.npy")
-            np.save(frame_filename, frame)
-            print(f"保存截图: {frame_filename}")
+        # 将帧添加到数组中
+        frames.append(frame)
 
-            # 更新计时器
-            start_time = current_time
-            frame_count += 1
+        # 按指定的帧率调整读取帧的位置
+        frame_idx += frame_interval
+    
+    # 转换为 NumPy 数组
+    frames_np = np.array(frames)
 
-        # 如果已处理完所有帧，退出
-        if frame_count >= total_frames:
-            break
-
-    # 释放资源并关闭所有窗口
+    # 释放资源
     cap.release()
-    cv2.destroyAllWindows()
+
+    return frames_np
 
 
 def load_numpy_images_from_folder(folder_path="tmp"):
@@ -121,25 +118,28 @@ def load_numpy_images_from_folder(folder_path="tmp"):
 
     return images
 
+if __name__ == '__main__':
+    delete_all_files_in_folder('tmp/')
+    model_path = 'pose_landmarker_heavy.task'
+    BaseOptions = mp.tasks.BaseOptions
+    PoseLandmarker = mp.tasks.vision.PoseLandmarker
+    PoseLandmarkerOptions = mp.tasks.vision.PoseLandmarkerOptions
+    VisionRunningMode = mp.tasks.vision.RunningMode
 
-model_path = 'pose_landmarker_heavy.task'
-BaseOptions = mp.tasks.BaseOptions
-PoseLandmarker = mp.tasks.vision.PoseLandmarker
-PoseLandmarkerOptions = mp.tasks.vision.PoseLandmarkerOptions
-VisionRunningMode = mp.tasks.vision.RunningMode
+    options = PoseLandmarkerOptions(
+        base_options=BaseOptions(model_asset_path=model_path),
+        running_mode=VisionRunningMode.IMAGE)
 
-options = PoseLandmarkerOptions(
-    base_options=BaseOptions(model_asset_path=model_path),
-    running_mode=VisionRunningMode.IMAGE)
-
-with PoseLandmarker.create_from_options(options) as landmarker:
-    save_frames_as_numpy("input.mp4")
-    images = load_numpy_images_from_folder()
-    for numpy_image in images:
-        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=numpy_image)
-        detection_result = landmarker.detect(mp_image)
-        annotated_image = draw_landmarks_on_image(mp_image.numpy_view(),
-                                                  detection_result)
-        cv2.imshow(annotated_image)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        cv2.destroyAllWindows()
+    with PoseLandmarker.create_from_options(options) as landmarker:
+        read_video_as_numpy("input.mp4")
+        images = load_numpy_images_from_folder()
+        for idx, numpy_image in enumerate(images):
+            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=numpy_image)
+            detection_result = landmarker.detect(mp_image)
+            annotated_image = draw_landmarks_on_image(mp_image.numpy_view(),
+                                                      detection_result)
+            try:
+                cv2.imshow(f'title{idx}', annotated_image)
+                cv2.waitKey(0)
+            except Exception as e:
+                print(e)
