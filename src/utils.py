@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import json
 
 
 def delete_all_files_in_folder(folder_path):
@@ -37,3 +38,14 @@ def load_numpy_images_from_folder(folder_path="tmp"):
             print(f"加载了 {filename}")
 
     return images
+
+
+def write_to_json(filename: str, data: dict):
+    with open(filename, 'w') as f:
+        json.dump(data, f)
+        print(f"Saved to {filename}")
+
+
+def read_from_json(filename: str):
+    with open(filename, 'r') as f:
+        return json.load(f)

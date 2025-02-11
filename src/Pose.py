@@ -4,20 +4,25 @@ import json
 
 class Pose:
 
-    def __init__(self, timestamp, detection_result):
+    def __init__(self, timestamp=None, landmarks=None):
         self.timestamp = timestamp
-        self.landmarks = self._resolve_detection_result(detection_result)
+        self.landmarks = landmarks
 
-    def _resolve_detection_result(self, detection_result) -> dict:
+    @staticmethod
+    def resolve_detection_result(detection_result) -> dict:
         landmarks = []
-        for landmark_object in detection_result.pose_world_landmarks[0]:
-            landmark = {
-                'x': landmark_object.x,
-                'y': landmark_object.y,
-                'z': landmark_object.z,
-                'visibility': landmark_object.visibility
-            }
-            landmarks.append(landmark)
+        try:
+            for landmark_object in detection_result.pose_world_landmarks[0]:
+                landmark = {
+                    'x': landmark_object.x,
+                    'y': landmark_object.y,
+                    'z': landmark_object.z,
+                    'visibility': landmark_object.visibility
+                }
+                landmarks.append(landmark)
+        except Exception as e:
+            raise ValueError(
+                f"An error occured resolving dectection result: {e}")
         resolved_landmarks = {}
         resolved_landmarks['left_shoulder'] = landmarks[11]
         resolved_landmarks['right_shoulder'] = landmarks[12]
@@ -36,43 +41,30 @@ class Pose:
     @property
     def angles(self):
         return {
-            'left_knee': self.calculate_angle('left_knee'),
-            'right_knee': self.calculate_angle('right_knee'),
-            'left_hip': self.calculate_angle('left_hip'),
-            'left_ankle': self.calculate_angle('left_ankle'),
-            'right_ankle': self.calculate_angle('right_ankle')
+            'left_knee': self._calculate_joint_angle('left_knee'),
+            'right_knee': self._calculate_joint_angle('right_knee'),
+            'left_hip': self._calculate_joint_angle('left_hip'),
+            'left_ankle': self._calculate_joint_angle('left_ankle'),
+            'right_ankle': self._calculate_joint_angle('right_ankle')
         }
 
-    def calculate_angle(self, joint):
-        if joint == 'left_knee':
-            return self._calculate_joint_angle(
-                self.landmarks['left_hip'],
-                self.landmarks['left_knee'],
-                self.landmarks['left_ankle'])
-        elif joint == 'right_knee':
-            return self._calculate_joint_angle(
-                self.landmarks['right_hip'],
-                self.landmarks['right_knee'],
-                self.landmarks['right_ankle'])
-        elif joint == 'left_hip':
-            return self._calculate_joint_angle(
-                self.landmarks['left_shoulder'],
-                self.landmarks['left_hip'],
-                self.landmarks['left_knee'])
-        elif joint == 'left_ankle':
-            return self._calculate_joint_angle(
-                self.landmarks['left_knee'],
-                self.landmarks['left_ankle'],
-                self.landmarks['left_foot_index'])
-        elif joint == 'right_ankle':
-            return self._calculate_joint_angle(
-                self.landmarks['right_knee'],
-                self.landmarks['right_ankle'],
-                self.landmarks['right_foot_index'])
-        else:
+    def _calculate_joint_angle(self, joint: str) -> float:
+        joint_mapping = {
+            'left_knee': ('left_hip', 'left_knee', 'left_ankle'),
+            'right_knee': ('right_hip', 'right_knee', 'right_ankle'),
+            'left_hip': ('left_shoulder', 'left_hip', 'left_knee'),
+            'left_ankle': ('left_knee', 'left_ankle', 'left_foot_index'),
+            'right_ankle': ('right_knee', 'right_ankle', 'right_foot_index')
+        }
+        if joint not in joint_mapping:
             raise ValueError(f"Unknown joint: {joint}")
+        points = joint_mapping[joint]
+        return self.calculate_angle(self.landmarks[points[0]],
+                                    self.landmarks[points[1]],
+                                    self.landmarks[points[2]])
 
-    def _calculate_joint_angle(self, pointA, pointB, pointC) -> float:
+    @staticmethod
+    def calculate_angle(pointA, pointB, pointC) -> float:
         # Calculate the angle between three points (A, B, C)
         AB = (pointB['x'] - pointA['x'], pointB['y'] - pointA['y'])
         BC = (pointC['x'] - pointB['x'], pointC['y'] - pointB['y'])
@@ -90,13 +82,28 @@ class Pose:
             angle = math.pi - angle
         return math.degrees(angle)
 
-    def to_json(self):
-        return json.dumps({
+    @property
+    def to_dict(self):
+        return {
             'timestamp': self.timestamp,
             'landmarks': self.landmarks,
             'angles': self.angles
-        })
+        }
+
+    @staticmethod
+    def init_from_dict(data):
+        pose = Pose()
+        pose.timestamp = data['timestamp']
+        pose.landmarks = data['landmarks']
+        return pose
+
+    @staticmethod
+    def init_from_detection_result(timestamp, detection_result):
+        pose = Pose()
+        pose.timestamp = timestamp
+        pose.landmarks = Pose.resolve_detection_result(detection_result)
+        return pose
 
 
 if __name__ == '__main__':
-    print(Pose._calculate_joint_angle(None, (0, 0), (1, 1), (1, 0)))
+    print(Pose.calculate_angle((0, 0), (1, 1), (1, 0)))
