@@ -15,24 +15,33 @@ def main():
                         type=str,
                         help='Set working mode (video/image/stream)')
     parser.add_argument('-fi', '--frame_interval', type=int,
-                        default=10, help='Frame interval for video recognition')
+                        default=10,
+                        help='Frame interval for video recognition')
     parser.add_argument('-o', '--output_file', type=str,
-                        default='output.json', help='Output file path (name.json)')
+                        default='output.json',
+                        help='Output file path (name.json)')
     args = parser.parse_args()
 
     if not args.input_file:
         print("Please specify the input file path.")
         return
-    else:
-        if args.mode == 'video':
-            video_recognition(
-                args.input_file, args.frame_interval, args.output_file)
-        elif args.mode == 'image':
-            image_recognition(args.input_file)
-        elif args.mode == 'stream':
-            stream_recognition(args.input_file)
+
+    mode_functions = {
+        'video': lambda: video_recognition(args.input_file,
+                                           args.frame_interval,
+                                           args.output_file),
+        'image': lambda: image_recognition(args.input_file,
+                                           args.output_file),
+        'stream': lambda: stream_recognition(args.input_file)
+    }
+
+    try:
+        if args.mode in mode_functions:
+            mode_functions[args.mode]()
         else:
             print("Please specify the working mode (video/image/stream).")
+    except Exception as e:
+        print(f"An error occurred: {e}")
 
 
 if __name__ == "__main__":

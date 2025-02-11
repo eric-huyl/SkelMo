@@ -47,10 +47,12 @@ def read_video_as_numpy(video_path, frame_interval=10):
     return frames_np
 
 
-def video_recognition(input_file_path='input.mp4', frame_interval=10, output_file_path='example_video_output.json'):
-    
+def video_recognition(input_file_path: str, frame_interval: int,
+                      output_file_path: str):
+
     try:
-        frames = read_video_as_numpy(input_file_path, frame_interval=frame_interval)
+        frames = read_video_as_numpy(
+            input_file_path, frame_interval=frame_interval)
     except Exception as e:
         print(f'Error reading video file: {e}')
         return
@@ -63,7 +65,7 @@ def video_recognition(input_file_path='input.mp4', frame_interval=10, output_fil
     options = PoseLandmarkerOptions(
         base_options=BaseOptions(model_asset_path=model_path),
         running_mode=VisionRunningMode.IMAGE,
-        num_poses=3)
+        num_poses=1)
 
     with PoseLandmarker.create_from_options(options) as landmarker:
         poses = []
