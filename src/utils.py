@@ -48,4 +48,5 @@ def write_to_json(filename: str, data: dict):
 
 def read_from_json(filename: str):
     with open(filename, 'r') as f:
+        print(f"Loaded from {filename}")
         return json.load(f)

@@ -33,5 +33,5 @@
 *.nef
 
 *.task
-tmp/
-output/
+tmp/*.*
+output/*.*

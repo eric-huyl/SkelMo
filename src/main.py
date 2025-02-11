@@ -1,30 +1,38 @@
 # my_cli_tool/main.py
 import argparse
+from video import video_recognition
+from image import image_recognition
+from stream import stream_recognition
 
 
 def main():
-    # 创建命令行解析器
-    parser = argparse.ArgumentParser(description="My CLI Tool")
-
-    # 添加命令行参数
-    parser.add_argument('-n',
-                        '--name',
+    parser = argparse.ArgumentParser(
+        description="Skeleton Motion Recognition Tool")
+    parser.add_argument('input_file', type=str,
+                        default='input.mp4', help='Target file path')
+    parser.add_argument('-m',
+                        '--mode',
                         type=str,
-                        help="Your name",
-                        required=True)
-    parser.add_argument('-g',
-                        '--greet',
-                        action='store_true',
-                        help="Greet the user")
-
-    # 解析命令行参数
+                        help='Set working mode (video/image/stream)')
+    parser.add_argument('-fi', '--frame_interval', type=int,
+                        default=10, help='Frame interval for video recognition')
+    parser.add_argument('-o', '--output_file', type=str,
+                        default='output.json', help='Output file path (name.json)')
     args = parser.parse_args()
 
-    # 执行命令
-    if args.greet:
-        print(f"Hello, {args.name}!")
+    if not args.input_file:
+        print("Please specify the input file path.")
+        return
     else:
-        print(f"Goodbye, {args.name}!")
+        if args.mode == 'video':
+            video_recognition(
+                args.input_file, args.frame_interval, args.output_file)
+        elif args.mode == 'image':
+            image_recognition(args.input_file)
+        elif args.mode == 'stream':
+            stream_recognition(args.input_file)
+        else:
+            print("Please specify the working mode (video/image/stream).")
 
 
 if __name__ == "__main__":
