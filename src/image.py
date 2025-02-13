@@ -10,8 +10,6 @@ def image_recognition(input_file_path: str, output_file_path: str):
     try:
         # Load the input image from an image file.
         mp_image = mp.Image.create_from_file(input_file_path)
-        # Load the input image from a numpy array.
-        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=numpy_image)
     except Exception as e:
         print(f'Error reading image file: {e}')
         return
