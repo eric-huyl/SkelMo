@@ -1,6 +1,6 @@
-# SkelMotion
+# SkelMo
 
-SkelMotion 是一个基于 **MediaPipe** 的姿态识别项目，能够从视频、图像和实时流中识别全身关节角度。该项目利用 MediaPipe 的姿态检测功能来分析人体关节并实时或从静态输入中计算其角度。
+SkelMo 是一个基于 **MediaPipe** 的姿态识别项目，能够从视频、图像和实时流中识别全身关节角度。该项目利用 MediaPipe 的姿态检测功能来分析人体关节并实时或从静态输入中计算其角度。
 
 ## 功能
 
@@ -21,8 +21,8 @@ SkelMotion 是一个基于 **MediaPipe** 的姿态识别项目，能够从视频
 ### 1. 克隆仓库
 
 ```bash
-git clone https://github.com/eric-huyl/SkelMotion.git
-cd SkelMotion
+git clone https://github.com/eric-huyl/SkelMo.git
+cd SkelMo
 ```
 
 ### 2. 创建并激活 conda 环境
